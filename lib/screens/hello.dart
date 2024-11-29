@@ -17,9 +17,8 @@ class HelloScreen extends StatefulWidget {
 }
 
 class _HelloScreenState extends State<HelloScreen> {
-  LoginState _state = LoginState.waiting;
-  String status =
-      "Otwórz aplikacje na urządzeniu z Androidem, następnie w ustawieniach kliknij \"Zaloguj się na TV\"";
+  LoginState state = LoginState.waiting;
+  String status = "Otwórz aplikację na telefonie";
   late final BonsoirBroadcast broadcast;
 
   @override
@@ -35,7 +34,6 @@ class _HelloScreenState extends State<HelloScreen> {
   }
 
   void setupLogin() async {
-    if (!Platform.isAndroid) return;
     final BonsoirService service = BonsoirService(
       name: (await DeviceInfoPlugin().androidInfo).device,
       type: "_majusssfilman._tcp",
@@ -48,7 +46,7 @@ class _HelloScreenState extends State<HelloScreen> {
       client.listen((final raw) {
         final data = String.fromCharCodes(raw).trim();
         if (data == "GETSTATE") {
-          client.write("STATE:${_state.toString()}");
+          client.write("STATE:${state.toString()}");
           return;
         }
         if (data.startsWith("LOGIN:")) {
@@ -56,7 +54,7 @@ class _HelloScreenState extends State<HelloScreen> {
           final filmanNotifier =
               Provider.of<FilmanNotifier>(context, listen: false);
           setState(() {
-            _state = LoginState.loginin;
+            state = LoginState.loginin;
             status = "Logowanie jako $login...";
             filmanNotifier.cookies
               ..clear()
@@ -84,23 +82,12 @@ class _HelloScreenState extends State<HelloScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Column(
+          const Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text("Unofficial Filman Client for TVs",
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineLarge
-                      ?.copyWith(fontWeight: FontWeight.bold)),
-              Flexible(
-                child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width * 0.4),
-                    child: const Text(
-                      "Ta nieoficjalna aplikacja, stworzona przez entuzjaste programowania, wyświetla dane z Filman.cc i innych stron internetowych firm trzecich. Nie jesteśmy związani z Filman.cc ani z żadną inną stroną internetową, którą wyświetlamy. Traktuj tę aplikację jako narzędzie do przeglądania treści.",
-                    )),
-              ),
+              Text("Unofficial Filman Client for TVs"),
+              Text("cos tam")
             ],
           ),
           const SizedBox(
@@ -109,18 +96,7 @@ class _HelloScreenState extends State<HelloScreen> {
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text("Status", style: Theme.of(context).textTheme.headlineMedium),
-              Flexible(
-                child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width * 0.4),
-                    child: Text(
-                      status,
-                      textAlign: TextAlign.center,
-                    )),
-              ),
-            ],
+            children: [const Text("Status"), Text(status)],
           ),
         ],
       ),

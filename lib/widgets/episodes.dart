@@ -9,6 +9,7 @@ import "package:unofficial_filman_client/types/season.dart";
 import "package:provider/provider.dart";
 import "package:unofficial_filman_client/types/watched.dart";
 import "package:unofficial_filman_client/notifiers/download.dart";
+import "package:unofficial_filman_client/utils/hosts.dart";
 import "package:unofficial_filman_client/utils/select_dialog.dart";
 
 class EpisodesModal extends StatefulWidget {
@@ -120,14 +121,16 @@ class _EpisodesModalState extends State<EpisodesModal> {
           ? const CircularProgressIndicator()
           : Icon(downloaded != null ? Icons.save : Icons.download),
       onPressed: () async {
-        if (downloaded != null || filmDetails.links == null) {
+        if (!context.mounted ||
+            downloaded != null ||
+            filmDetails.links == null) {
           return;
         }
-        if (filmDetails.links?.isEmpty == true || !context.mounted) {
+        final directs = await getDirects(filmDetails.links!);
+        if (directs.isEmpty || !context.mounted) {
           return;
         }
-        final (l, q) =
-            await getUserSelectedPreferences(context, filmDetails.links!);
+        final (l, q) = await getUserSelectedPreferences(directs, context);
         if (l == null || q == null) {
           return;
         }
@@ -189,8 +192,6 @@ class _EpisodesModalState extends State<EpisodesModal> {
                               (final e) => e.film.url == episode.episodeUrl);
 
                       return ListTile(
-                        autofocus:
-                            index == 0 && episode.getEpisodeNumber() == 1,
                         title: Row(
                           children: [
                             Text(

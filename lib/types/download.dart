@@ -4,8 +4,8 @@ import "dart:io";
 
 import "package:background_downloader/background_downloader.dart";
 import "package:unofficial_filman_client/types/film_details.dart";
-import "package:unofficial_filman_client/types/video_scrappers.dart";
-import "package:unofficial_filman_client/utils/select_dialog.dart";
+import "package:unofficial_filman_client/types/links.dart";
+import "package:unofficial_filman_client/utils/hosts.dart";
 
 class Downloading {
   final FilmDetails? parentDetails;
@@ -63,21 +63,18 @@ class Downloading {
 
   Future<DownloadTask> getTask() async {
     if (_task == null) {
-      final links = film.links ?? [];
+      final directs = await getDirects(film.links ?? []);
+      directs.removeWhere((final link) =>
+          link.language != language ||
+          link.qualityVersion != quality ||
+          (link.link.contains(".m3u8")));
 
-      links.removeWhere(
-          (final link) => link.language != language || link.quality != quality);
-
-      final best = await selectBestLink(links);
-
-      final direct = await best?.getDirectLink();
-
+      final DirectLink? direct = (directs..shuffle()).firstOrNull;
       if (direct == null) {
-        throw Exception("No host to download from");
+        throw Exception("No host to download from found");
       }
-
       _task = DownloadTask(
-          url: direct,
+          url: direct.link,
           filename: filename,
           displayName: displayName,
           metaData: _compress(jsonEncode(toMap())),
@@ -101,6 +98,13 @@ class DownloadedSingle {
   final Quality quality;
   final Language language;
   final String displayName;
+
+  // Downloaded(
+  //     {required this.film,
+  //     required this.displayName,
+  //     required this.quality,
+  //     required this.language})
+  //     : filename = "${film.title.replaceAll(' ', '_').replaceAll('/', '')}.mp4";
 
   DownloadedSingle.fromDownloading(final Downloading downloading)
       : film = downloading.film,

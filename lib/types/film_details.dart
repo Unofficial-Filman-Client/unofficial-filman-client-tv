@@ -1,5 +1,5 @@
+import "package:unofficial_filman_client/types/links.dart";
 import "package:unofficial_filman_client/types/season.dart";
-import "package:unofficial_filman_client/types/video_scrappers.dart";
 
 class FilmDetails {
   final String url;
@@ -12,7 +12,7 @@ class FilmDetails {
   final List<String> categories;
   final bool isSerial;
   final List<Season>? seasons;
-  final List<MediaLink>? links;
+  final List<Host>? links;
   final bool isEpisode;
   final String? seasonEpisodeTag;
   final String? parentUrl;
@@ -66,10 +66,10 @@ class FilmDetails {
                 json["seasons"].map((final e) => Season.fromMap(e)))
             : null,
         links = json["links"] != null
-            ? List<MediaLink>.from(json["links"]
+            ? List<Host>.from(json["links"]
                 .map((final e) {
                   try {
-                    return MediaLink.fromMap(e);
+                    return Host.fromMap(e);
                   } catch (err) {
                     return null;
                   }

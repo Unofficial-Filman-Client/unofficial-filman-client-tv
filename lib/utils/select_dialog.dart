@@ -1,10 +1,11 @@
 import "dart:async";
 
 import "package:flutter/material.dart";
-import "package:unofficial_filman_client/types/video_scrappers.dart";
+import "package:unofficial_filman_client/types/links.dart";
+import "package:unofficial_filman_client/utils/hosts.dart";
 
 Future<List<Language>> _getAvailableLanguages(
-    final List<MediaLink> links) async {
+    final List<DirectLink> links) async {
   final List<Language> languages = [];
   for (final link in links) {
     if (!languages.contains(link.language)) {
@@ -15,12 +16,12 @@ Future<List<Language>> _getAvailableLanguages(
 }
 
 Future<List<Quality>> _getAvaliableQualitiesForLanguage(
-    final Language lang, final List<MediaLink> links) async {
+    final Language lang, final List<DirectLink> links) async {
   final List<Quality> qualities = [];
   for (final link in links) {
     if (link.language == lang) {
-      if (!qualities.contains(link.quality)) {
-        qualities.add(link.quality);
+      if (!qualities.contains(link.qualityVersion)) {
+        qualities.add(link.qualityVersion);
       }
     }
   }
@@ -51,12 +52,8 @@ Future<dynamic> _showSelectionDialog(
 }
 
 Future<(Language?, Quality?)> getUserSelectedPreferences(
-    final BuildContext context, final List<MediaLink> directs,
-    [final bool supportm3u8 = true]) async {
-  directs
-      .removeWhere((final link) => link.url.contains(".m3u8") && !supportm3u8);
-
-  final List<Language> languages = await _getAvailableLanguages(directs);
+    final List<DirectLink> links, final BuildContext context) async {
+  final List<Language> languages = await _getAvailableLanguages(links);
   late Language lang;
   if (languages.length > 1 && context.mounted) {
     lang = await _showSelectionDialog(
@@ -70,7 +67,7 @@ Future<(Language?, Quality?)> getUserSelectedPreferences(
     return (null, null);
   }
   final List<Quality> qualities =
-      await _getAvaliableQualitiesForLanguage(lang, directs);
+      await _getAvaliableQualitiesForLanguage(lang, links);
   late Quality quality;
   if (qualities.length > 1 && context.mounted) {
     quality = await _showSelectionDialog(context, qualities, "Wybierz jakość");
@@ -82,34 +79,21 @@ Future<(Language?, Quality?)> getUserSelectedPreferences(
   return (lang, quality);
 }
 
-// TODO: if need add m3u8 support here
-Future<MediaLink?> selectBestLink(final List<MediaLink> links) async {
-  final validLinks = <MediaLink>[];
-
-  for (final link in links) {
-    await link.getDirectLink();
-    if (link.isVideoValid) {
-      validLinks.add(link);
-    }
+Future<DirectLink?> getUserSelectedVersion(
+    final List<Host> links, final BuildContext context,
+    [final bool supportm3u8 = true]) async {
+  final List<DirectLink> directs = await getDirects(links);
+  if (directs.isEmpty) {
+    return null;
   }
-
-  if (validLinks.isEmpty) return null;
-
-  validLinks
-      .sort((final a, final b) => a.responseTime.compareTo(b.responseTime));
-
-  return validLinks.first;
-}
-
-Future<MediaLink?> getUserSelectedVersion(
-    final BuildContext context, final List<MediaLink> links) async {
-  // links.removeWhere((final link) => link.url.contains(".m3u8") && !supportm3u8);
+  directs
+      .removeWhere((final link) => link.link.contains(".m3u8") && !supportm3u8);
   if (!context.mounted) return null;
-  final (lang, quality) = await getUserSelectedPreferences(context, links);
+  final (lang, quality) = await getUserSelectedPreferences(directs, context);
   if (lang == null || quality == null) {
     return null;
   }
-  links.removeWhere(
-      (final link) => link.language != lang || link.quality != quality);
-  return await selectBestLink(links);
+  directs.removeWhere(
+      (final link) => link.language != lang || link.qualityVersion != quality);
+  return (directs..shuffle()).first;
 }

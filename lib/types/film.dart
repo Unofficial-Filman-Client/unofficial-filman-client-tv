@@ -10,9 +10,4 @@ class Film {
     required this.imageUrl,
     required this.link,
   });
-
-  @override
-  String toString() {
-    return "Film(title: $title, desc: $desc, imageUrl: $imageUrl, link: $link)";
-  }
 }
