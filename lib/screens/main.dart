@@ -8,6 +8,7 @@ import "package:unofficial_filman_client/screens/main/home.dart";
 import "package:unofficial_filman_client/screens/main/offline.dart";
 import "package:unofficial_filman_client/screens/main/watched.dart";
 import "package:unofficial_filman_client/screens/settings.dart";
+import "package:unofficial_filman_client/widgets/search.dart";
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -19,6 +20,23 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int currentPageIndex = 0;
   int? focusedIndex;
+
+  void _showSearchModal() {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.9,
+      ),
+      builder: (final context) {
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: const SearchModal(),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(final BuildContext context) {
@@ -32,6 +50,12 @@ class _MainScreenState extends State<MainScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  _buildNavItem(
+                    icon: Icons.search,
+                    label: "Szukaj",
+                    index: -1,
+                    onTap: _showSearchModal,
+                  ),
                   _buildNavItem(
                     icon: Icons.home,
                     label: "Strona Główna",
