@@ -29,7 +29,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
   @override
   void initState() {
     super.initState();
-    categoryLoader = Provider.of<FilmanNotifier>(context, listen: false).getCategories();
+    categoryLoader =
+        Provider.of<FilmanNotifier>(context, listen: false).getCategories();
   }
 
   @override
@@ -52,9 +53,11 @@ class _CategoryScreenState extends State<CategoryScreen> {
           if (snapshot.hasError) {
             return ErrorHandling(
               error: snapshot.error!,
-              onLogin: (final response) => Navigator.of(context).pushReplacement(
+              onLogin: (final response) =>
+                  Navigator.of(context).pushReplacement(
                 MaterialPageRoute(
-                  builder: (final context) => CategoryScreen(forSeries: widget.forSeries),
+                  builder: (final context) =>
+                      CategoryScreen(forSeries: widget.forSeries),
                 ),
               ),
             );
@@ -107,14 +110,16 @@ class StyleLayout extends StatelessWidget {
     required this.backButtonFocusNode,
   });
 
-  void _scrollToCategory(final BuildContext context, final int index, {final bool animate = true}) {
+  void _scrollToCategory(final BuildContext context, final int index,
+      {final bool animate = true}) {
     if (!categoriesScrollController.hasClients) return;
 
     final screenWidth = MediaQuery.of(context).size.width;
     final centerPosition = screenWidth / 2;
     final targetPosition = (buttonWidth + buttonSpacing) * index;
     double offset = targetPosition - centerPosition + (buttonWidth / 2);
-    offset = offset.clamp(0.0, categoriesScrollController.position.maxScrollExtent);
+    offset =
+        offset.clamp(0.0, categoriesScrollController.position.maxScrollExtent);
 
     if (animate) {
       categoriesScrollController.animateTo(
@@ -139,15 +144,20 @@ class StyleLayout extends StatelessWidget {
               Focus(
                 focusNode: backButtonFocusNode,
                 onKey: (final node, final event) {
-                  if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                  if (event is RawKeyDownEvent &&
+                      event.logicalKey == LogicalKeyboardKey.arrowDown) {
                     final scope = FocusScope.of(context);
                     final categoryButtons = scope.traversalDescendants
-                        .where((final e) => e.context?.findAncestorWidgetOfExactType<CategoryButton>() != null)
+                        .where((final e) =>
+                            e.context?.findAncestorWidgetOfExactType<
+                                CategoryButton>() !=
+                            null)
                         .toList();
 
                     final targetButton = categoryButtons.firstWhere(
                       (final e) {
-                        final btn = e.context?.findAncestorWidgetOfExactType<CategoryButton>();
+                        final btn = e.context
+                            ?.findAncestorWidgetOfExactType<CategoryButton>();
                         return btn != null && (btn).index == selectedIndex;
                       },
                       orElse: () => categoryButtons.first,
@@ -179,7 +189,8 @@ class StyleLayout extends StatelessWidget {
             child: ListView.builder(
               controller: categoriesScrollController,
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: horizontalPadding),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: horizontalPadding),
               itemCount: categories.length,
               itemBuilder: (final context, final index) => Container(
                 width: buttonWidth,
@@ -252,9 +263,11 @@ class _CategoryButtonState extends State<CategoryButton> {
           if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
             final scope = FocusScope.of(context);
             final movieTile = scope.traversalDescendants
-                .where((final e) => e.context?.findAncestorWidgetOfExactType<MovieTile>() != null)
+                .where((final e) =>
+                    e.context?.findAncestorWidgetOfExactType<MovieTile>() !=
+                    null)
                 .firstOrNull;
-            
+
             if (movieTile != null) {
               movieTile.requestFocus();
               return KeyEventResult.handled;
@@ -262,9 +275,11 @@ class _CategoryButtonState extends State<CategoryButton> {
           } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
             final scope = FocusScope.of(context);
             final backButton = scope.traversalDescendants
-                .where((final e) => e.context?.findAncestorWidgetOfExactType<BackButton>() != null)
+                .where((final e) =>
+                    e.context?.findAncestorWidgetOfExactType<BackButton>() !=
+                    null)
                 .firstOrNull;
-            
+
             if (backButton != null) {
               backButton.requestFocus();
               return KeyEventResult.handled;
@@ -324,10 +339,14 @@ class CategoryContent extends StatefulWidget {
   State<CategoryContent> createState() => _CategoryContentState();
 }
 
-class _CategoryContentState extends State<CategoryContent> with AutomaticKeepAliveClientMixin {
-  late Future<List<Film>> _filmsFuture;
-  final Map<String, List<Film>> _cachedFilms = {};
+class _CategoryContentState extends State<CategoryContent>
+    with AutomaticKeepAliveClientMixin {
   static const int itemsPerRow = 6;
+
+  List<Film> _movies = [];
+  bool _isLoading = false;
+  bool _hasMoreMovies = true;
+  int _page = 0;
 
   @override
   bool get wantKeepAlive => true;
@@ -335,57 +354,114 @@ class _CategoryContentState extends State<CategoryContent> with AutomaticKeepAli
   @override
   void initState() {
     super.initState();
-    _filmsFuture = _loadFilms();
+    widget.gridScrollController.addListener(_scrollListener);
+    _loadInitialMovies();
   }
 
-  Future<List<Film>> _loadFilms() async {
-    final cacheKey = "${widget.category.name}_${widget.forSeries}";
-    if (_cachedFilms.containsKey(cacheKey)) return _cachedFilms[cacheKey]!;
+  Future<void> _loadInitialMovies() async {
+    setState(() {
+      _isLoading = true;
+    });
 
-    final films = await Provider.of<FilmanNotifier>(context, listen: false)
-        .getMoviesByCategory(widget.category, widget.forSeries);
-    _cachedFilms[cacheKey] = films;
-    return films;
+    try {
+      final initialMovies =
+          await Provider.of<FilmanNotifier>(context, listen: false)
+              .getMoviesByCategory(widget.category, widget.forSeries);
+
+      setState(() {
+        _movies = initialMovies;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _scrollListener() {
+    if (widget.gridScrollController.position.pixels >=
+            widget.gridScrollController.position.maxScrollExtent - 200 &&
+        !_isLoading &&
+        _hasMoreMovies) {
+      _loadMoreMovies();
+    }
+  }
+
+  Future<void> _loadMoreMovies() async {
+    if (_isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+      _page++;
+    });
+
+    try {
+      final newMovies =
+          await Provider.of<FilmanNotifier>(context, listen: false)
+              .getMoviesByCategory(
+        widget.category,
+        widget.forSeries,
+        page: _page,
+      );
+
+      setState(() {
+        if (newMovies.isEmpty) {
+          _hasMoreMovies = false;
+        } else {
+          _movies.addAll(newMovies);
+        }
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(final BuildContext context) {
     super.build(context);
 
-    return FutureBuilder<List<Film>>(
-      future: _filmsFuture,
-      builder: (final context, final snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return const Center(child: Icon(Icons.error));
-        }
+    if (_isLoading && _movies.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-        final films = snapshot.data ?? [];
-
-        return GridView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          controller: widget.gridScrollController,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: itemsPerRow,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 16,
-            childAspectRatio: 2/3,
-          ),
-          itemCount: films.length,
-          itemBuilder: (final context, final index) => MovieTile(
-            film: films[index],
-            autofocus: index == 0,
-            gridController: widget.gridScrollController,
-            index: index,
-            itemsPerRow: itemsPerRow,
-            totalItems: films.length,
-            currentCategoryIndex: widget.currentCategoryIndex,
-          ),
-        );
-      },
+    return GridView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      controller: widget.gridScrollController,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: itemsPerRow,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 16,
+        childAspectRatio: 2 / 3,
+      ),
+      itemCount: _movies.length + (_isLoading ? 1 : 0),
+      itemBuilder: (final context, final index) => index >= _movies.length
+          ? const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          : MovieTile(
+              film: _movies[index],
+              autofocus: index == 0,
+              gridController: widget.gridScrollController,
+              index: index,
+              itemsPerRow: itemsPerRow,
+              totalItems: _movies.length,
+              currentCategoryIndex: widget.currentCategoryIndex,
+            ),
     );
+  }
+
+  @override
+  void dispose() {
+    widget.gridScrollController.removeListener(_scrollListener);
+    super.dispose();
   }
 }
 
@@ -426,13 +502,16 @@ class _MovieTileState extends State<MovieTile> {
 
   void _scrollToVisible() {
     if (!widget.gridController.hasClients) return;
-    
+
     final RenderObject? renderObject = focusNode.context?.findRenderObject();
     if (renderObject == null) return;
 
-    final RenderAbstractViewport viewport = RenderAbstractViewport.of(renderObject);
-    final RevealedOffset topOffset = viewport.getOffsetToReveal(renderObject, 0.0);
-    final RevealedOffset centerOffset = viewport.getOffsetToReveal(renderObject, 0.3);
+    final RenderAbstractViewport viewport =
+        RenderAbstractViewport.of(renderObject);
+    final RevealedOffset topOffset =
+        viewport.getOffsetToReveal(renderObject, 0.0);
+    final RevealedOffset centerOffset =
+        viewport.getOffsetToReveal(renderObject, 0.3);
     final isScrollingUp = widget.gridController.offset > topOffset.offset;
     double targetOffset;
     if (isScrollingUp) {
@@ -440,12 +519,14 @@ class _MovieTileState extends State<MovieTile> {
       final double itemHeight = box?.size.height ?? 0;
       targetOffset = topOffset.offset + (itemHeight * 0.3);
       final double minScroll = widget.gridController.offset - itemHeight;
-      targetOffset = targetOffset.clamp(minScroll, widget.gridController.offset);
+      targetOffset =
+          targetOffset.clamp(minScroll, widget.gridController.offset);
     } else {
       targetOffset = centerOffset.offset;
     }
 
-    targetOffset = targetOffset.clamp(0.0, widget.gridController.position.maxScrollExtent);
+    targetOffset =
+        targetOffset.clamp(0.0, widget.gridController.position.maxScrollExtent);
     if ((targetOffset - widget.gridController.offset).abs() > 1.0) {
       widget.gridController.animateTo(
         targetOffset,
@@ -487,13 +568,18 @@ class _MovieTileState extends State<MovieTile> {
             if (widget.index < widget.itemsPerRow) {
               final scope = FocusScope.of(context);
               final categoryButtons = scope.traversalDescendants
-                  .where((final e) => e.context?.findAncestorWidgetOfExactType<CategoryButton>() != null)
+                  .where((final e) =>
+                      e.context
+                          ?.findAncestorWidgetOfExactType<CategoryButton>() !=
+                      null)
                   .toList();
 
               final targetButton = categoryButtons.firstWhere(
                 (final e) {
-                  final btn = e.context?.findAncestorWidgetOfExactType<CategoryButton>();
-                  return btn != null && (btn).index == widget.currentCategoryIndex;
+                  final btn = e.context
+                      ?.findAncestorWidgetOfExactType<CategoryButton>();
+                  return btn != null &&
+                      (btn).index == widget.currentCategoryIndex;
                 },
                 orElse: () => categoryButtons.first,
               );
@@ -522,7 +608,7 @@ class _MovieTileState extends State<MovieTile> {
             }
             return KeyEventResult.handled;
           } else if (event.logicalKey == LogicalKeyboardKey.enter ||
-                    event.logicalKey == LogicalKeyboardKey.select) {
+              event.logicalKey == LogicalKeyboardKey.select) {
             _handleFilmSelection();
             return KeyEventResult.handled;
           }
@@ -555,10 +641,13 @@ class _MovieTileState extends State<MovieTile> {
                       child: FastCachedImage(
                         url: widget.film.imageUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (final context, final error, final stackTrace) => const Center(
+                        errorBuilder:
+                            (final context, final error, final stackTrace) =>
+                                const Center(
                           child: Icon(Icons.error_outline, size: 40),
                         ),
-                        loadingBuilder: (final context, final progress) => Center(
+                        loadingBuilder: (final context, final progress) =>
+                            Center(
                           child: CircularProgressIndicator(
                             value: progress.progressPercentage.value,
                           ),

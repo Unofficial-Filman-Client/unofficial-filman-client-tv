@@ -151,39 +151,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               settings))
                     ],
                   )))),
-          const Divider(),
-          ListTile(
-            title: const Text("Automatyczny wybór języka"),
-            subtitle: const Text(
-                "Kolejność w jakiej odtwarzacz będzie preferował języki."),
-            onTap: () => Provider.of<SettingsNotifier>(context, listen: false)
-                .setAutoLanguage(
-                    !Provider.of<SettingsNotifier>(context, listen: false)
-                        .autoLanguage),
-            trailing: Switch(
-              value: Provider.of<SettingsNotifier>(context, listen: false)
-                  .autoLanguage,
-              onChanged: (final bool value) {
-                Provider.of<SettingsNotifier>(context, listen: false)
-                    .setAutoLanguage(value);
-              },
-            ),
-          ),
-          InkWell(
-            onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (final context) => const ReorderLanguageScreen()));
-            },
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("Zmień kolejność języków"),
-                    Icon(Icons.arrow_right)
-                  ]),
-            ),
-          ),
         ],
       ),
     );
@@ -205,8 +172,8 @@ class _ReorderLanguageScreenState extends State<ReorderLanguageScreen> {
   @override
   void initState() {
     super.initState();
-    _languages = List.from(
-        Provider.of<SettingsNotifier>(context, listen: false).preferredLanguages);
+    _languages = List.from(Provider.of<SettingsNotifier>(context, listen: false)
+        .preferredLanguages);
   }
 
   void _moveItem(final bool moveUp) {
@@ -318,7 +285,8 @@ class _ReorderLanguageScreenState extends State<ReorderLanguageScreen> {
                   _languages[index].toString(),
                   style: TextStyle(
                     fontSize: isEditing ? 22 : 18,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
                 trailing: isEditing
